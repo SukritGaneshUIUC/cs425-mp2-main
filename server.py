@@ -8,10 +8,12 @@ from logging.handlers import RotatingFileHandler
 import datetime
 import mp1_client
 import mp1_server
+import os
 
 HOST = socket.gethostname()
 IP = socket.gethostbyname(HOST)
 PORT = 23333
+FILE_DIRECTORY = 'files'
 
 # define file logging info
 logging.basicConfig(level=logging.DEBUG,
@@ -62,6 +64,47 @@ class Server:
             s.sendto(json.dumps(join_msg).encode(), (utils.INTRODUCER_HOST, PORT))
         else:
             print("This is introducer host!")
+
+    # upload file
+    def upload(self, filename, filepath):
+        print('upload')
+
+        # we will send file to ourselves
+        # have more complex election methods later
+
+
+
+    # download file
+    def download(self, filename, filepath):
+        print('download')
+
+    # delete file
+    def delete(self, filename, filepath):
+        print('delete')
+
+    # handle file
+    def handle_file(self):
+        # input command, filename, local filepath (if required)
+        command = input("Please enter desired file command. PUT for upload, GET for download, DEL for delete.")
+        command = command.upper()
+        if (command not in ("GET", "PUT", "DEL")):
+            print("Invalid file command!")
+            return 1
+        filename = input("Please enter the name of the file you'd like to perform the command on.")
+        filepath = ""
+        if (command == "PUT" or command == "GET"):
+            filepath = input("Please enter local filepath.")
+            if (not os.path.exists(filepath)):
+                print("File at \"" + filepath + "\" does not exist!")
+                return 2
+
+        # call relevant function
+        if (command == "PUT"):
+            self.upload(filename, filepath)
+        elif (command == "GET"):
+            self.download(filename, filepath)
+        elif (command == "DEL"):
+            self.delete(filename, filepath)
 
     def send_ping(self, host):
         '''
@@ -272,6 +315,9 @@ class Server:
                 t = threading.Thread(target = c.query)
                 t.start()
                 t.join()
+            # file commands
+            elif (input_str == "6"):
+                self.handle_file()
             else:
                 print("Invalid input. Please try again")
 
