@@ -12,7 +12,8 @@ import os
 
 HOST = socket.gethostname()
 IP = socket.gethostbyname(HOST)
-PORT = 23333
+MAIN_PORT = 23333
+FILE_PORT = 23334
 FILE_DIRECTORY = 'files'
 
 # define file logging info
@@ -32,6 +33,7 @@ recv_logger = logging.getLogger('receiver')
 monitor_logger = logging.getLogger('monitor')
 join_logger = logging.getLogger('join')
 send_logger = logging.getLogger('send')
+file_logger = logging.getLogger('file')
 
 
 class Server:
@@ -42,6 +44,7 @@ class Server:
             HOST: (timestamp, utils.Status.LEAVE)}
         self.time_lock = threading.Lock()
         self.ml_lock = threading.Lock()
+        self.file_lock = threading.Lock()
         # record the time current process receives last ack from its neighbors
         self.last_update = {}
 
@@ -61,18 +64,31 @@ class Server:
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         if HOST != utils.INTRODUCER_HOST:
             join_msg = [utils.Type.JOIN, HOST, self.MembershipList[HOST]]
-            s.sendto(json.dumps(join_msg).encode(), (utils.INTRODUCER_HOST, PORT))
+            s.sendto(json.dumps(join_msg).encode(), (utils.INTRODUCER_HOST, MAIN_PORT))
         else:
             print("This is introducer host!")
 
     # upload file
     def upload(self, filename, filepath):
-        print('upload')
+        print('Attempting to upload \"' + filename + "\" at location \"" + filepath + "\"!")
+        # read file
+        f = open(filepath, "r")
+        data = f.read()
+        f.close()
 
         # we will send file to ourselves
         # have more complex election methods later
 
+        upload_dest = IP
+        filesize = os.path.getsize(filepath)
+        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
+            try:
+                s.sendto(json.dumps({"COMMAND": "PUT", "FILENAME": filename, "FILEDATA": data}).encode('utf-8'), (upload_dest, FILE_PORT))
+            except Exception as e:
+                print(e)
 
+        # send out message to every server about where file was uploaded
+        # so they can update their global maps
 
     # download file
     def download(self, filename, filepath):
@@ -87,7 +103,7 @@ class Server:
         # input command, filename, local filepath (if required)
         command = input("Please enter desired file command. PUT for upload, GET for download, DEL for delete.")
         command = command.upper()
-        if (command not in ("GET", "PUT", "DEL")):
+        if (command not in ("PUT", "GET", "DEL")):
             print("Invalid file command!")
             return 1
         filename = input("Please enter the name of the file you'd like to perform the command on.")
@@ -105,6 +121,38 @@ class Server:
             self.download(filename, filepath)
         elif (command == "DEL"):
             self.delete(filename, filepath)
+
+    def file_program(self):
+        print("file program started")
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.bind((HOST, FILE_PORT))
+        recv_logger.info('receiver program started')
+        while True:
+            try:
+                data, addr = s.recvfrom(4096)
+                recv_logger.info("FILE connection from: " + str(addr) + " with data: " + data.decode())
+                if data:
+                    print("got something ...")
+                    request = data.decode('utf-8')
+                    request_list = json.loads(request)
+                    file_data = request_list[2]
+                    filename = request_list[1]
+                    command = request_list[0]
+                    print(command + "\n" + file_data)
+                                
+                    self.file_lock.acquire()
+                    if command == "PUT":
+                        file_logger.info("Saving file \"" + filename + "\" ...")
+                        f = open(os.path.join(FILE_DIRECTORY, filename), "w")
+                        f.write(file_data)
+                        f.close()
+
+                    else:
+                        file_logger.error("Unknown file command type!")
+                    self.file_lock.release()
+            except Exception as e:
+                print(e)
+
 
     def send_ping(self, host):
         '''
@@ -128,7 +176,7 @@ class Server:
                 send_logger.info(self.MembershipList)
                 
                 ping_msg = [utils.Type.PING, HOST, self.MembershipList]
-                s.sendto(json.dumps(ping_msg).encode(), (host, PORT))
+                s.sendto(json.dumps(ping_msg).encode(), (host, MAIN_PORT))
                 if host in self.MembershipList and host not in self.last_update:
                     self.time_lock.acquire()
                     self.last_update[host] = time.time()
@@ -148,7 +196,7 @@ class Server:
         '''
         print("receiver started")
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        s.bind((HOST, PORT))
+        s.bind((HOST, MAIN_PORT))
         recv_logger.info('receiver program started')
         while True:
             try:
@@ -182,7 +230,7 @@ class Server:
                             ss = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
                             for hostname in hosts:
                                 if hostname != HOST and hostname != sender_host:
-                                    ss.sendto(json.dumps(join_msg).encode(), (hostname, PORT))
+                                    ss.sendto(json.dumps(join_msg).encode(), (hostname, MAIN_PORT))
 
                     elif request_type == utils.Type.PING:
                         recv_logger.info("Encounter PING before:")
@@ -202,7 +250,7 @@ class Server:
                         recv_logger.info(json.dumps(self.MembershipList))
                         pong = [utils.Type.PONG, HOST, self.MembershipList[HOST]]
                         
-                        s.sendto(json.dumps(pong).encode(), (sender_host, PORT))
+                        s.sendto(json.dumps(pong).encode(), (sender_host, MAIN_PORT))
 
                     elif request_type == utils.Type.PONG:
                         recv_logger.info("Encounter PONG before:")
@@ -333,17 +381,19 @@ class Server:
         t_shell = threading.Thread(target=self.shell)
         # t_sender = threading.Thread(target=self.send_ping)
         t_server_mp1 = threading.Thread(target = mp1_server.server_program)
+        t_file = threading.Thread(target=self.file_program)
         threads = []
         i = 0
-        for host in utils.get_neighbors(HOST):
-            t_send = threading.Thread(target=self.send_ping, args=(host, ))
-            threads.append(t_send)
-            i += 1
+        # for host in utils.get_neighbors(HOST):
+        #     t_send = threading.Thread(target=self.send_ping, args=(host, ))
+        #     threads.append(t_send)
+        #     i += 1
         t_monitor.start()
         t_receiver.start()
         t_shell.start()
         # t_sender.start()
         t_server_mp1.start()
+        t_file.start()
         for t in threads:
             t.start()
         t_monitor.join()
@@ -351,6 +401,7 @@ class Server:
         t_shell.join()
         t_sender.join()
         t_server_mp1.join()
+        t_file.join()
         for t in threads:
             t.join()
 
