@@ -68,36 +68,6 @@ class Server:
         else:
             print("This is introducer host!")
 
-    # upload file
-    def upload(self, filename, filepath):
-        print('Attempting to upload \"' + filename + "\" at location \"" + filepath + "\"!")
-        # read file
-        f = open(filepath, "r")
-        data = f.read()
-        f.close()
-
-        # we will send file to ourselves
-        # have more complex election methods later
-
-        upload_dest = IP
-        filesize = os.path.getsize(filepath)
-        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
-            try:
-                s.sendto(json.dumps({"COMMAND": "PUT", "FILENAME": filename, "FILEDATA": data}).encode('utf-8'), (upload_dest, FILE_PORT))
-            except Exception as e:
-                print(e)
-
-        # send out message to every server about where file was uploaded
-        # so they can update their global maps
-
-    # download file
-    def download(self, filename, filepath):
-        print('download')
-
-    # delete file
-    def delete(self, filename, filepath):
-        print('delete')
-
     # handle file
     def handle_file(self):
         # input command, filename, local filepath (if required)
@@ -122,6 +92,41 @@ class Server:
         elif (command == "DEL"):
             self.delete(filename, filepath)
 
+    # upload file
+    def upload(self, filename, filepath):
+        print('Attempting to upload \"' + filename + "\" at location \"" + filepath + "\"!")
+        # read file
+        f = open(filepath, "r")
+        data = f.read()
+        f.close()
+
+        # we will send file to ourselves
+        # have more complex election methods later
+
+        upload_dest = IP
+        filesize = os.path.getsize(filepath)
+        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
+            try:
+                # Step 1: Send file metadata (command, filename, filesize)
+                s.sendto(json.dumps({"COMMAND": "PUT", "FILENAME": filename, "FILEDATA": data}).encode('utf-8'), (upload_dest, FILE_PORT))
+
+                # Step 2: Send file data (in chunks of 4096 bytes)
+            except Exception as e:
+                print(e)
+
+        # send out message to every server about where file was uploaded
+        # so they can update their global maps
+
+    # download file
+    def download(self, filename, filepath):
+        print('download')
+
+    # delete file
+    def delete(self, filename, filepath):
+        print('delete')
+
+    # general program to handle file requests
+    # this runs on its own thread and uses its own own port
     def file_program(self):
         print("file program started")
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -132,17 +137,16 @@ class Server:
                 data, addr = s.recvfrom(4096)
                 recv_logger.info("FILE connection from: " + str(addr) + " with data: " + data.decode())
                 if data:
-                    print("got something ...")
                     request = data.decode('utf-8')
                     request_list = json.loads(request)
-                    file_data = request_list[2]
-                    filename = request_list[1]
-                    command = request_list[0]
-                    print(command + "\n" + file_data)
+                    file_data = request_list['FILEDATA']
+                    filename = request_list['FILENAME']
+                    command = request_list['COMMAND']
                                 
                     self.file_lock.acquire()
                     if command == "PUT":
-                        file_logger.info("Saving file \"" + filename + "\" ...")
+                        print('Saving file \"' + filename + "\.")
+                        file_logger.info("Saving file \"" + filename + "\".")
                         f = open(os.path.join(FILE_DIRECTORY, filename), "w")
                         f.write(file_data)
                         f.close()
