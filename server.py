@@ -15,6 +15,15 @@ IP = socket.gethostbyname(HOST)
 MAIN_PORT = 23333
 FILE_PORT = 23334
 FILE_DIRECTORY = 'files'
+BUFFER_SIZE = 4096
+
+# commands
+PUT = "PUT"
+GET = "GET"
+DELETE = "DEL"
+GET_VERSIONS = "GET-V"
+TRANSFER = "TRANSFER"
+FILE_COMMANDS = (PUT, GET, DELETE, GET_VERSIONS, TRANSFER)
 
 # define file logging info
 logging.basicConfig(level=logging.DEBUG,
@@ -48,6 +57,7 @@ class Server:
         # record the time current process receives last ack from its neighbors
         self.last_update = {}
 
+    # New process joining: must contact introducer
     def join(self):
         '''
         Contacts the introducer that the process will join the group and uptate its status.
@@ -68,49 +78,62 @@ class Server:
         else:
             print("This is introducer host!")
 
-    # handle file
+    # Handle file commands
     def handle_file(self):
         # input command, filename, local filepath (if required)
         command = input("Please enter desired file command. PUT for upload, GET for download, DEL for delete.")
         command = command.upper()
-        if (command not in ("PUT", "GET", "DEL")):
+        if (command not in FILE_COMMANDS):
             print("Invalid file command!")
             return 1
         filename = input("Please enter the name of the file you'd like to perform the command on.")
         filepath = ""
-        if (command == "PUT" or command == "GET"):
+        if (command == PUT or command == GET):
             filepath = input("Please enter local filepath.")
             if (not os.path.exists(filepath)):
                 print("File at \"" + filepath + "\" does not exist!")
                 return 2
 
         # call relevant function
-        if (command == "PUT"):
+        if (command == PUT):
             self.upload(filename, filepath)
-        elif (command == "GET"):
+        elif (command == GET):
             self.download(filename, filepath)
-        elif (command == "DEL"):
+        elif (command == DELETE):
             self.delete(filename, filepath)
+
+    # Send file to socket
+
+    # Receive file from socket
 
     # upload file
     def upload(self, filename, filepath):
         print('Attempting to upload \"' + filename + "\" at location \"" + filepath + "\"!")
+        filesize = os.path.getsize(filepath)
+
         # read file
         f = open(filepath, "r")
         data = f.read()
+        filesize = len(data)
         f.close()
 
         # we will send file to ourselves
         # have more complex election methods later
 
         upload_dest = IP
-        filesize = os.path.getsize(filepath)
         with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
+            s.connect((upload_dest, FILE_PORT))
             try:
                 # Step 1: Send file metadata (command, filename, filesize)
-                s.sendto(json.dumps({"COMMAND": "PUT", "FILENAME": filename, "FILEDATA": data}).encode('utf-8'), (upload_dest, FILE_PORT))
+                s.send(json.dumps({"COMMAND": PUT, "FILENAME": filename, "FILESIZE": filesize}).encode('utf-8'))
 
                 # Step 2: Send file data (in chunks of 4096 bytes)
+                with open(filepath, "rb") as f:
+                    while True:
+                        bytes_read = f.read(BUFFER_SIZE)
+                        if not bytes_read:
+                            break
+                        s.send(bytes_read)
             except Exception as e:
                 print(e)
 
@@ -134,28 +157,49 @@ class Server:
         recv_logger.info('receiver program started')
         while True:
             try:
-                data, addr = s.recvfrom(4096)
+                data, addr = s.recvfrom(BUFFER_SIZE)
                 recv_logger.info("FILE connection from: " + str(addr) + " with data: " + data.decode())
                 if data:
+                    # Receive Header
                     request = data.decode('utf-8')
                     request_list = json.loads(request)
-                    file_data = request_list['FILEDATA']
+                    filesize = request_list['FILESIZE']
                     filename = request_list['FILENAME']
                     command = request_list['COMMAND']
                                 
                     self.file_lock.acquire()
-                    if command == "PUT":
-                        print('Saving file \"' + filename + "\.")
-                        file_logger.info("Saving file \"" + filename + "\".")
-                        f = open(os.path.join(FILE_DIRECTORY, filename), "w")
-                        f.write(file_data)
-                        f.close()
+
+                    # Handle the actual file command
+                    if command == PUT:
+                        print('Saving file \"' + filename + "\".")
+                        local_filepath = os.path.join(FILE_DIRECTORY, filename)
+                        bytes_written = 0
+                        with open(local_filepath, "wb") as f:
+                            while bytes_written < filesize:
+                                bytes_read = s.recv(BUFFER_SIZE)
+                                f.write(bytes_read)
+                                bytes_written += len(bytes_read)
+
+                        print('writing done')
+
+                    elif command == GET:
+                        print('sending file')
+
+                    elif command == DELETE:
+                        print('deleting file')
+
+                    elif command == TRANSFER:
+                        print('saving file without version updates')
+
+                    elif (command == GET_VERSIONS):
+                        print('sending superfile with all versions concatenated')
 
                     else:
-                        file_logger.error("Unknown file command type!")
+                        print("Unknown file command! Try again!")
                     self.file_lock.release()
             except Exception as e:
                 print(e)
+
 
 
     def send_ping(self, host):
@@ -403,7 +447,7 @@ class Server:
         t_monitor.join()
         t_receiver.join()
         t_shell.join()
-        t_sender.join()
+        # t_sender.join()
         t_server_mp1.join()
         t_file.join()
         for t in threads:
