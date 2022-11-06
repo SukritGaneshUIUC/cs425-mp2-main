@@ -90,7 +90,7 @@ class Server:
         filepath = ""
         if (command == PUT or command == GET):
             filepath = input("Please enter local filepath.")
-            if (not os.path.exists(filepath)):
+            if (command == PUT and not os.path.exists(filepath)):
                 print("File at \"" + filepath + "\" does not exist!")
                 return 2
 
@@ -102,29 +102,13 @@ class Server:
         elif (command == DELETE):
             self.delete(filename, filepath)
 
-    # Send file to socket
-
-    # Receive file from socket
-
-    # upload file
-    def upload(self, filename, filepath):
-        print('Attempting to upload \"' + filename + "\" at location \"" + filepath + "\"!")
-        filesize = os.path.getsize(filepath)
-
-        # read file
-        f = open(filepath, "r")
-        data = f.read()
-        filesize = len(data)
-        f.close()
-
-        # we will send file to ourselves
-        # have more complex election methods later
-
-        upload_dest = IP
+    # send file
+    def send_file(self, command, filename, filepath, destination_ip):
         with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
-            s.connect((upload_dest, FILE_PORT))
+            s.connect((destination_ip, FILE_PORT))
             try:
                 # Step 1: Send file metadata (command, filename, filesize)
+                filesize = os.path.getsize(filepath)
                 s.send(json.dumps({"COMMAND": PUT, "FILENAME": filename, "FILESIZE": filesize}).encode('utf-8'))
 
                 # Step 2: Send file data (in chunks of 4096 bytes)
@@ -137,12 +121,46 @@ class Server:
             except Exception as e:
                 print(e)
 
+    # receive file
+
+    # upload file
+    def upload(self, filename, filepath):
+        print('Attempting to upload \"' + filename + "\" at location \"" + filepath + "\"!")
+        filesize = os.path.getsize(filepath)
+
+        # we will send file to ourselves AND next three in the ring for redundancy
+        self.send_file(PUT, filename, filepath, IP)
+
         # send out message to every server about where file was uploaded
         # so they can update their global maps
 
     # download file
     def download(self, filename, filepath):
-        print('download')
+        print('Attempting to download \"' + filename + "\" to location \"" + filepath + "\"!")
+
+        # we will download file from any server which stores it
+        download_dest = IP
+        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
+            s.connect((download_dest, FILE_PORT))
+            try:
+                # Step 1: Send file metadata (command, filename, filesize [redundant])
+                s.send(json.dumps({"COMMAND": GET, "FILENAME": filename, "FILESIZE": 0}).encode('utf-8'))
+
+                # Step 2: Get file data (in chunks of 4096 bytes)
+                data, _ = s.recv(BUFFER_SIZE)
+                request = data.decode('utf-8')
+                request_list = json.loads(request)
+                filesize = request_list['FILESIZE']
+
+                bytes_written = 0
+                with open(filepath, "wb") as f:
+                    while bytes_written < filesize:
+                        print('ll:', len(bytes_read))
+                        bytes_read, _ = s.recv(BUFFER_SIZE)
+                        f.write(bytes_read)
+                        bytes_written += len(bytes_read)
+            except Exception as e:
+                print(e)
 
     # delete file
     def delete(self, filename, filepath):
@@ -154,11 +172,11 @@ class Server:
         print("file program started")
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         s.bind((HOST, FILE_PORT))
-        recv_logger.info('receiver program started')
+        file_logger.info('file program started')
         while True:
             try:
                 data, addr = s.recvfrom(BUFFER_SIZE)
-                recv_logger.info("FILE connection from: " + str(addr) + " with data: " + data.decode())
+                file_logger.info("FILE connection from: " + str(addr) + " with data: " + data.decode())
                 if data:
                     # Receive Header
                     request = data.decode('utf-8')
@@ -176,17 +194,33 @@ class Server:
                         bytes_written = 0
                         with open(local_filepath, "wb") as f:
                             while bytes_written < filesize:
-                                bytes_read = s.recv(BUFFER_SIZE)
+                                bytes_read, _ = s.recvfrom(BUFFER_SIZE)
                                 f.write(bytes_read)
                                 bytes_written += len(bytes_read)
 
-                        print('writing done')
-
                     elif command == GET:
-                        print('sending file')
+                        print('Sending file \"' + filename + "\".")
+                        local_filepath = os.path.join(FILE_DIRECTORY, filename)
+
+                        # Send size first
+                        filesize = os.path.getsize(local_filepath)
+                        s.connect((addr[0], FILE_PORT))
+                        s.send(json.dumps({"FILESIZE": filesize}).encode('utf-8'))
+
+                        # Then send file
+                        with open(local_filepath, "rb") as f:
+                            while True:
+                                bytes_read = f.read(BUFFER_SIZE)
+                                if not bytes_read:
+                                    break
+                                s.send(bytes_read)
+
+                        time.sleep(3)
 
                     elif command == DELETE:
-                        print('deleting file')
+                        print('Deleting file \"' + filename + "\".")
+                        local_filepath = os.path.join(FILE_DIRECTORY, filename)
+                        os.remove(local_filepath)
 
                     elif command == TRANSFER:
                         print('saving file without version updates')
@@ -196,10 +230,12 @@ class Server:
 
                     else:
                         print("Unknown file command! Try again!")
+
                     self.file_lock.release()
+
+
             except Exception as e:
                 print(e)
-
 
 
     def send_ping(self, host):
