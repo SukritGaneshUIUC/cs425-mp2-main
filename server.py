@@ -331,8 +331,8 @@ class Server:
                     elif command == DELETE:
                         filename = request_list['FILENAME']
                         print('Deleting file \"' + filename + "\".")
-                        local_filepath = os.path.join(FILE_DIRECTORY, filename)
-                        os.remove(local_filepath)
+                        
+                 
                         self.delete_all_files(filename)
                         for check_host in self.FILES:
                             if filename in self.FILES[check_host]:
@@ -501,6 +501,7 @@ class Server:
                             self.MembershipList[hostname] = (value[0], utils.Status.LEAVE)
                             monitor_logger.info("Encounter timeout after:")
                             monitor_logger.info(json.dumps(self.MembershipList))
+                            
                         self.last_update.pop(hostname, None)
                 
                 self.time_lock.release()
