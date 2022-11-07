@@ -488,7 +488,7 @@ class Server:
                 self.handle_file()
             elif (input_str == "7"):
                 print("Selected file_map")
-                for host in self.Files:
+                for host in self.FILES:
                     for file in host:
                         print("HOST " + host + ": " + file)
             else:
