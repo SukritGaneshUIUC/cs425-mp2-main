@@ -138,9 +138,9 @@ class Server:
 
         # we will send file to ourselves AND next three in the ring for redundancy
         print("BEFORE")
-        print(socket.gethostname())
+        print(socket.gethostbyname(HOST))
         for host in utils.get_neighbors(HOST):
-            self.send_file(PUT, filename, filepath, socket.gethostbyname(host))
+            self.send_file(PUT, filename, filepath, host)
         self.send_file(PUT, filename, filepath, IP)
         print("AFTER")
         # send out message to every server about where file was uploaded
