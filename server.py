@@ -138,6 +138,7 @@ class Server:
 
         # we will send file to ourselves AND next three in the ring for redundancy
         print("BEFORE")
+        print(socket.gethostbyname())
         for host in utils.get_neighbors(HOST):
             self.send_file(PUT, filename, filepath, socket.gethostbyname(host))
         self.send_file(PUT, filename, filepath, IP)
