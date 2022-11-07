@@ -303,7 +303,7 @@ class Server:
                             print("after " + local_filepath)
                         else:
                             local_filepath = self.create_version_superfile(filename)
-                        local_filepath = os.path.join(FILE_DIRECTORY, filename)
+                        
 
                         host = request_list["HOST"]
                         # Send size first
