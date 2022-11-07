@@ -212,7 +212,7 @@ class Server:
             local_filepath = self.create_version_superfile(filename, int(num_version))
             return
         for check_host in self.FILES:
-            if filename in self.FILES[check_host]:
+            if filename in self.FILES[check_host] and self.MembershipList[check_host][1] == utils.Status.RUNNING:
                 check = False
                 if not check_host == HOST:
                     with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
@@ -341,7 +341,7 @@ class Server:
                     elif command == HOST_FAIL:
                         host = request_list["HOST"]
                         self.FILES[host] = []
-                        
+
                     elif command == MODIFY_ADD:
                         filename = request_list['FILENAME']
                         host = request_list["HOST"]
