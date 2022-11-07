@@ -223,13 +223,12 @@ class Server:
                                 f.write(bytes_read)
                          
                                 bytes_written += len(bytes_read)
-                        self.FILES[HOST].append(filename)
+
                         for host in utils.get_all_hosts():
-                            if host == HOST:
-                                continue
-                            with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
+                
+                            with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as m:
                                 print("inside one")
-                                s.sendto(json.dumps({"COMMAND": MODIFY_ADD, "FILENAME": filename, "HOST": HOST}).encode('utf-8'), (host, FILE_PORT))
+                                m.sendto(json.dumps({"COMMAND": MODIFY_ADD, "FILENAME": filename, "HOST": HOST}).encode('utf-8'), (host, FILE_PORT))
 
                     elif command == GET:
                         filesize = request_list['FILESIZE']
