@@ -249,7 +249,7 @@ class Server:
                                     bytes_read = f.read(BUFFER_SIZE)
                                     if not bytes_read:
                                         break
-                                    m.send(bytes_read)
+                                    m.sendto(bytes_read, (host, FILE_PORT))
 
                         time.sleep(3)
 
