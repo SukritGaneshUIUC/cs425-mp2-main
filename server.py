@@ -117,6 +117,7 @@ class Server:
             try:
                 # Step 1: Send file metadata (command, filename, filesize)
                 filesize = os.path.getsize(filepath)
+                print(host)
                 s.send(json.dumps({"COMMAND": PUT, "FILENAME": filename, "FILESIZE": filesize}).encode('utf-8'), (host, FILE_PORT))
 
                 # Step 2: Send file data (in chunks of 4096 bytes)
