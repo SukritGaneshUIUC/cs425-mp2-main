@@ -14,6 +14,7 @@ HOST = socket.gethostname()
 IP = socket.gethostbyname(HOST)
 MAIN_PORT = 23333
 FILE_PORT = 23334
+FILE_PORT_2 = 23335
 FILE_DIRECTORY = 'files'
 BUFFER_SIZE = 4096
 
@@ -156,6 +157,7 @@ class Server:
         for check_host in self.FILES:
             if filename in self.FILES[check_host] and not check_host == HOST:
                 with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
+                    s.bind((HOST, FILE_PORT_2))
                     try:
                         # Step 1: Send file metadata (command, filename, filesize [redundant])
                         s.sendto(json.dumps({"COMMAND": GET, "FILENAME": filename, "FILESIZE": 0, "HOST": HOST}).encode('utf-8'), (check_host, FILE_PORT))
@@ -243,13 +245,13 @@ class Server:
                         # Send size first
                         filesize = os.path.getsize(local_filepath)
                         with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as m:
-                            m.sendto(json.dumps({"FILESIZE": filesize}).encode('utf-8'), (host, FILE_PORT))
+                            m.sendto(json.dumps({"FILESIZE": filesize}).encode('utf-8'), (host, FILE_PORT_2))
                             with open(local_filepath, "rb") as f:
                                 while True:
                                     bytes_read = f.read(BUFFER_SIZE)
                                     if not bytes_read:
                                         break
-                                    m.sendto(bytes_read, (host, FILE_PORT))
+                                    m.sendto(bytes_read, (host, FILE_PORT_2))
 
                         time.sleep(3)
 
