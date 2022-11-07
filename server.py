@@ -488,9 +488,11 @@ class Server:
                 self.handle_file()
             elif (input_str == "7"):
                 print("Selected file_map")
-                for host in self.FILES:
-                    for file in host:
-                        print("HOST " + host + ": " + file)
+                for check_host in self.FILES:
+                    print("HOST: " + check_host)
+                    for file in check_host:
+                        print(file, end=", ")
+                    print("\n")
             else:
                 print("Invalid input. Please try again")
 
