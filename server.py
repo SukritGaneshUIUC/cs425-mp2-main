@@ -104,6 +104,9 @@ class Server:
             val = f.split('_')
             fn = val[0]
             v = val[1]
+            print(max_version)
+            print(version)
+            print(f)
             if (fn == filename) and v != "superfile" and int(v) > max_version - version:
                 print("just wrote version " + v)
                 curr_version_filepath = os.path.join(FILE_DIRECTORY, f)
