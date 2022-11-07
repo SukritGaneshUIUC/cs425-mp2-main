@@ -23,7 +23,11 @@ GET = "GET"
 DELETE = "DEL"
 GET_VERSIONS = "GET-V"
 TRANSFER = "TRANSFER"
-FILE_COMMANDS = (PUT, GET, DELETE, GET_VERSIONS, TRANSFER)
+MODIFY_ADD = "MODIFY_ADD"
+MODIFY_DEL = "MODIFY_DEL"
+FILE_COMMANDS = (PUT, GET, DELETE, GET_VERSIONS, TRANSFER, MODIFY_ADD, MODIFY_DEL)
+
+
 
 # define file logging info
 logging.basicConfig(level=logging.DEBUG,
@@ -51,6 +55,9 @@ class Server:
         # membership list, key: host, value: (timestamp, status)
         self.MembershipList = {
             HOST: (timestamp, utils.Status.LEAVE)}
+        self.FILES = {}
+        for host in utils.get_all_hosts():
+            self.FILES[host] = []
         self.time_lock = threading.Lock()
         self.ml_lock = threading.Lock()
         self.file_lock = threading.Lock()
@@ -129,8 +136,9 @@ class Server:
         filesize = os.path.getsize(filepath)
 
         # we will send file to ourselves AND next three in the ring for redundancy
+        for host in utils.get_neighbors(HOST):
+            self.send_file(PUT, filename, filepath, socket.gethostbyname(host))
         self.send_file(PUT, filename, filepath, IP)
-
         # send out message to every server about where file was uploaded
         # so they can update their global maps
 
@@ -144,7 +152,7 @@ class Server:
             s.connect((download_dest, FILE_PORT))
             try:
                 # Step 1: Send file metadata (command, filename, filesize [redundant])
-                s.send(json.dumps({"COMMAND": GET, "FILENAME": filename, "FILESIZE": 0}).encode('utf-8'))
+                s.send(json.dumps({"COMMAND": GET, "FILENAME": filename, "FILESIZE": 0, "HOST": HOST}).encode('utf-8'))
 
                 # Step 2: Get file data (in chunks of 4096 bytes)
                 data, _ = s.recv(BUFFER_SIZE)
@@ -164,7 +172,10 @@ class Server:
 
     # delete file
     def delete(self, filename, filepath):
-        print('delete')
+        for host in utils.get_all_hosts():
+            with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
+                s.connect((socket.gethostbyname(host), FILE_PORT))
+                s.send(json.dumps({"COMMAND": DELETE, "FILENAME": filename, "FILESIZE": 0}).encode('utf-8'))
 
     # general program to handle file requests
     # this runs on its own thread and uses its own own port
@@ -181,14 +192,15 @@ class Server:
                     # Receive Header
                     request = data.decode('utf-8')
                     request_list = json.loads(request)
-                    filesize = request_list['FILESIZE']
-                    filename = request_list['FILENAME']
+                    
                     command = request_list['COMMAND']
                                 
                     self.file_lock.acquire()
 
                     # Handle the actual file command
                     if command == PUT:
+                        filesize = request_list['FILESIZE']
+                        filename = request_list['FILENAME']
                         print('Saving file \"' + filename + "\".")
                         local_filepath = os.path.join(FILE_DIRECTORY, filename)
                         bytes_written = 0
@@ -197,15 +209,23 @@ class Server:
                                 bytes_read, _ = s.recvfrom(BUFFER_SIZE)
                                 f.write(bytes_read)
                                 bytes_written += len(bytes_read)
+                        
+                        for host in utils.get_all_hosts():
+                            with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
+                                s.connect((socket.gethostbyname(host), FILE_PORT))
+                                s.send(json.dumps({"COMMAND": MODIFY_ADD, "FILENAME": filename, "HOST": HOST}).encode('utf-8'))
+                
 
                     elif command == GET:
+                        filesize = request_list['FILESIZE']
+                        filename = request_list['FILENAME']
                         print('Sending file \"' + filename + "\".")
                         local_filepath = os.path.join(FILE_DIRECTORY, filename)
-
+                        host = request_list["HOST"]
                         # Send size first
                         filesize = os.path.getsize(local_filepath)
                         s.connect((addr[0], FILE_PORT))
-                        s.send(json.dumps({"FILESIZE": filesize}).encode('utf-8'))
+                        s.sendto(json.dumps({"FILESIZE": filesize}).encode('utf-8'), (host, FILE_PORT))
 
                         # Then send file
                         with open(local_filepath, "rb") as f:
@@ -218,10 +238,26 @@ class Server:
                         time.sleep(3)
 
                     elif command == DELETE:
+                        filename = request_list['FILENAME']
                         print('Deleting file \"' + filename + "\".")
                         local_filepath = os.path.join(FILE_DIRECTORY, filename)
                         os.remove(local_filepath)
 
+                        for host in utils.get_all_hosts():
+                            with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
+                                s.connect((socket.gethostbyname(host), FILE_PORT))
+                                s.send(json.dumps({"COMMAND": MODIFY_DEL, "FILENAME": filename, "HOST": HOST}).encode('utf-8'))
+
+                    elif command == MODIFY_ADD:
+                        filename = request_list['FILENAME']
+                        host = request_list["HOST"]
+                        self.FILES[host].append(filename)
+
+                    elif command == MODIFY_DEL:
+                        filename = request_list['FILENAME']
+                        host = request_list["HOST"]
+                        self.FILES[host].remove(filename)
+                    
                     elif command == TRANSFER:
                         print('saving file without version updates')
 
@@ -463,19 +499,19 @@ class Server:
         t_monitor = threading.Thread(target=self.monitor_program)
         t_receiver = threading.Thread(target=self.receiver_program)
         t_shell = threading.Thread(target=self.shell)
-        # t_sender = threading.Thread(target=self.send_ping)
+        t_sender = threading.Thread(target=self.send_ping)
         t_server_mp1 = threading.Thread(target = mp1_server.server_program)
         t_file = threading.Thread(target=self.file_program)
         threads = []
         i = 0
-        # for host in utils.get_neighbors(HOST):
-        #     t_send = threading.Thread(target=self.send_ping, args=(host, ))
-        #     threads.append(t_send)
-        #     i += 1
+        for host in utils.get_neighbors(HOST):
+            t_send = threading.Thread(target=self.send_ping, args=(host, ))
+            threads.append(t_send)
+            i += 1
         t_monitor.start()
         t_receiver.start()
         t_shell.start()
-        # t_sender.start()
+        t_sender.start()
         t_server_mp1.start()
         t_file.start()
         for t in threads:
@@ -483,7 +519,7 @@ class Server:
         t_monitor.join()
         t_receiver.join()
         t_shell.join()
-        # t_sender.join()
+        t_sender.join()
         t_server_mp1.join()
         t_file.join()
         for t in threads:
