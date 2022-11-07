@@ -34,7 +34,7 @@ def get_neighbors(host):
     #             yield "fa22-cs425-97%02d.cs.illinois.edu" % successor
     #         successor += 1
 
-    return "fa22-cs425-9702.cs.illinois.edu"
+    return ["fa22-cs425-9702.cs.illinois.edu"]
 
 
 def get_all_hosts():
