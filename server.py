@@ -200,6 +200,7 @@ class Server:
             try:
                 print("try please")
                 data, addr = s.recvfrom(BUFFER_SIZE)
+                print("received again")
                 file_logger.info("FILE connection from: " + str(addr) + " with data: " + data.decode())
                 if data:
                     # Receive Header
@@ -230,7 +231,7 @@ class Server:
 
                         for host in utils.get_all_hosts():
                             with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as m:
-                                print("inside one")
+                     
                                 m.sendto(json.dumps({"COMMAND": MODIFY_ADD, "FILENAME": filename, "HOST": HOST}).encode('utf-8'), (host, FILE_PORT))
 
                     elif command == GET:
@@ -265,7 +266,7 @@ class Server:
 
                         
                     elif command == MODIFY_ADD:
-                        print("inside here")
+                 
                         filename = request_list['FILENAME']
                         host = request_list["HOST"]
                         self.FILES[host].append(filename)
