@@ -161,7 +161,7 @@ class Server:
                 with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
                     try:
                         # Step 1: Send file metadata (command, filename, filesize [redundant])
-                        s.sendto(json.dumps({"COMMAND": GET, "FILENAME": filename, "FILESIZE": 0, "HOST": HOST}).encode('utf-8'), (check_host, ONE_PORT))
+                        s.sendto(json.dumps({"COMMAND": GET, "FILENAME": filename, "FILESIZE": 0, "HOST": HOST}).encode('utf-8'), (check_host, FILE_PORT))
 
                         # Step 2: Get file data (in chunks of 4096 bytes)
                         data, _ = k.recv(BUFFER_SIZE)
@@ -234,7 +234,7 @@ class Server:
 
                         for host in utils.get_all_hosts():
                             with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as m:
-                                
+                                time.sleep(0.5)
                                 m.sendto(json.dumps({"COMMAND": MODIFY_ADD, "FILENAME": filename, "HOST": HOST}).encode('utf-8'), (host, FILE_PORT))
 
                     elif command == GET:
@@ -268,10 +268,10 @@ class Server:
 
                         
                     elif command == MODIFY_ADD:
-                   
                         filename = request_list['FILENAME']
                         host = request_list["HOST"]
-                        self.FILES[host].append(filename)
+                        if filename not in self.FILES[host]:
+                            self.FILES[host].append(filename)
                         print("ADDED FROM " + host)
 
                     
