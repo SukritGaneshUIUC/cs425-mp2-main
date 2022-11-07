@@ -515,7 +515,7 @@ class Server:
         threads = []
         i = 0
         for host in utils.get_neighbors(HOST):
-            t_send = threading.Thread(target=self.send_ping, args=(host))
+            t_send = threading.Thread(target=self.send_ping, args=(host, ))
             threads.append(t_send)
             i += 1
         t_monitor.start()
