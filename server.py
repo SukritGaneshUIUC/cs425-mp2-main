@@ -109,7 +109,7 @@ class Server:
                 curr_version_filepath = os.path.join(FILE_DIRECTORY, f)
                 cvf = open(curr_version_filepath, "r")
                 nf.write(cvf.read())
-                nf.write('; just wrote version ' + v)
+                nf.write('\n; just wrote version ' + v)
                 cvf.close()
         nf.close()
         return filename
@@ -501,7 +501,9 @@ class Server:
                             self.MembershipList[hostname] = (value[0], utils.Status.LEAVE)
                             monitor_logger.info("Encounter timeout after:")
                             monitor_logger.info(json.dumps(self.MembershipList))
-                            
+                            for file in self.FILES[hostname]:
+                                self.download(GET, file, FILE_DIRECTORY)
+                                self.upload(file, FILE_DIRECTORY)
                         self.last_update.pop(hostname, None)
                 
                 self.time_lock.release()
