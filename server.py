@@ -105,6 +105,7 @@ class Server:
             fn = val[0]
             v = val[1]
             if (fn == filename) and v != "superfile" and int(v) > max_version - version:
+                print("just wrote version " + v)
                 curr_version_filepath = os.path.join(FILE_DIRECTORY, f)
                 cvf = open(curr_version_filepath, "r")
                 nf.write(cvf.read())
@@ -206,7 +207,7 @@ class Server:
         check = True
         before_time = time.time()
         if command == GET_VERSIONS:
-            num_version = input("Please enter the name of the file you'd like to perform the command on.")
+            num_version = input("Please enter how many version you want.")
             local_filepath = self.create_version_superfile(filename, int(num_version))
             return
         for check_host in self.FILES:
