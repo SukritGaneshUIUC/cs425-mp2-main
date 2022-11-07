@@ -79,7 +79,7 @@ class Server:
             v = val[1]
             if (fn == filename):
                 vc += 1
-            if (int(v) > max_v):
+            if v != "superfile" and (int(v) > max_v):
                 max_v = int(v)
                 max_version_filename = f
         print("once")
@@ -104,7 +104,7 @@ class Server:
             val = f.split('_')
             fn = val[0]
             v = val[1]
-            if (fn == filename) and int(v) > max_version - version:
+            if (fn == filename) and v != "superfile" and int(v) > max_version - version:
                 curr_version_filepath = os.path.join(FILE_DIRECTORY, f)
                 cvf = open(curr_version_filepath, "r")
                 nf.write(cvf.read())
