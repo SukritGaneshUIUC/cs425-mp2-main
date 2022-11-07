@@ -111,6 +111,7 @@ class Server:
 
     # send file
     def send_file(self, command, filename, filepath, destination_ip):
+        print("goes in")
         with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
             s.connect((destination_ip, FILE_PORT))
             try:
@@ -136,9 +137,11 @@ class Server:
         filesize = os.path.getsize(filepath)
 
         # we will send file to ourselves AND next three in the ring for redundancy
+        print("BEFORE")
         for host in utils.get_neighbors(HOST):
             self.send_file(PUT, filename, filepath, socket.gethostbyname(host))
         self.send_file(PUT, filename, filepath, IP)
+        print("AFTER")
         # send out message to every server about where file was uploaded
         # so they can update their global maps
 
