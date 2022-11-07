@@ -175,11 +175,6 @@ class Server:
                                 bytes_read, _ = s.recvfrom(BUFFER_SIZE)
                                 f.write(bytes_read)
                                 bytes_written += len(bytes_read)
-
-                        for host in utils.get_all_hosts():
-                            with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as m:
-                                print("inside one")
-                                m.sendto(json.dumps({"COMMAND": MODIFY_ADD, "FILENAME": filename, "HOST": HOST}).encode('utf-8'), (host, FILE_PORT))
                     except Exception as e:
                         print(e)
 
