@@ -96,9 +96,10 @@ class Server:
     # create superfile which is all versions concatenated (to send back to user)
     def create_version_superfile(self, filename, version):
         sf_filepath = os.path.join(FILE_DIRECTORY, (filename + "_superfile"))
+        check, max_version = self.get_latest_version(filename)
         nf = open(sf_filepath, "w")
         allfiles = os.listdir(FILE_DIRECTORY)
-        check, max_version = self.get_latest_version(filename)
+        
         for f in allfiles:
             val = f.split('_')
             fn = val[0]
