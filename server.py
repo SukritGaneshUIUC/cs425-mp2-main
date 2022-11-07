@@ -1,3 +1,4 @@
+from dummy_threading import local
 import socket
 import time
 import threading
@@ -71,6 +72,7 @@ class Server:
         vc = 0
         max_v = -1
         max_version_filename = ""
+        print("runit")
         for f in allfiles:
             fn, v = f.split('_')
             if (fn == filename):
@@ -78,6 +80,7 @@ class Server:
             if (int(v) > max_v):
                 max_v = int(v)
                 max_version_filename = f
+        print("once")
         return max_version_filename, vc
 
     # delete all versions of a file
@@ -294,13 +297,17 @@ class Server:
                         
                         local_filepath = ""
                         if (command == GET):
+                            print("befre")
                             local_filepath, _ = self.get_latest_version(filename)
+                            print("after " + local_filepath)
                         else:
                             local_filepath = self.create_version_superfile(filename)
                         local_filepath = os.path.join(FILE_DIRECTORY, filename)
+
                         host = request_list["HOST"]
                         # Send size first
                         filesize = os.path.getsize(local_filepath)
+                        print("HERE")
                         with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as m:
                             m.sendto(json.dumps({"FILESIZE": filesize}).encode('utf-8'), (host, FILE_PORT_2))
                             with open(local_filepath, "rb") as f:
