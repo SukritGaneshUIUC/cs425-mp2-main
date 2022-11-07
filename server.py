@@ -243,16 +243,13 @@ class Server:
                         # Send size first
                         filesize = os.path.getsize(local_filepath)
                         with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as m:
-                             m.sendto(json.dumps({"FILESIZE": filesize}).encode('utf-8'), (host, FILE_PORT))
-                       
-
-                        # Then send file
-                        with open(local_filepath, "rb") as f:
-                            while True:
-                                bytes_read = f.read(BUFFER_SIZE)
-                                if not bytes_read:
-                                    break
-                                s.send(bytes_read)
+                            m.sendto(json.dumps({"FILESIZE": filesize}).encode('utf-8'), (host, FILE_PORT))
+                            with open(local_filepath, "rb") as f:
+                                while True:
+                                    bytes_read = f.read(BUFFER_SIZE)
+                                    if not bytes_read:
+                                        break
+                                    m.send(bytes_read)
 
                         time.sleep(3)
 
