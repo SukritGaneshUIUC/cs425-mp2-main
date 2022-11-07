@@ -14,6 +14,7 @@ HOST = socket.gethostname()
 IP = socket.gethostbyname(HOST)
 MAIN_PORT = 23333
 FILE_PORT = 23334
+ONE_PORT = 23335
 FILE_DIRECTORY = 'files'
 BUFFER_SIZE = 4096
 
@@ -155,13 +156,15 @@ class Server:
 
         for check_host in self.FILES:
             if filename in self.FILES[check_host] and not check_host == HOST:
+                k = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+                k.bind((HOST, ONE_PORT))
                 with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
                     try:
                         # Step 1: Send file metadata (command, filename, filesize [redundant])
-                        s.sendto(json.dumps({"COMMAND": GET, "FILENAME": filename, "FILESIZE": 0, "HOST": HOST}).encode('utf-8'), (check_host, FILE_PORT))
+                        s.sendto(json.dumps({"COMMAND": GET, "FILENAME": filename, "FILESIZE": 0, "HOST": HOST}).encode('utf-8'), (check_host, ONE_PORT))
 
                         # Step 2: Get file data (in chunks of 4096 bytes)
-                        data, _ = s.recv(BUFFER_SIZE)
+                        data, _ = k.recv(BUFFER_SIZE)
                         request = data.decode('utf-8')
                         request_list = json.loads(request)
                         filesize = request_list['FILESIZE']
@@ -170,7 +173,7 @@ class Server:
                         with open(filepath, "wb") as f:
                             while bytes_written < filesize:
                                 print('ll:', len(bytes_read))
-                                bytes_read, _ = s.recv(BUFFER_SIZE)
+                                bytes_read, _ = k.recv(BUFFER_SIZE)
                                 f.write(bytes_read)
                                 bytes_written += len(bytes_read)
 
@@ -231,7 +234,7 @@ class Server:
 
                         for host in utils.get_all_hosts():
                             with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as m:
-                     
+                                time.sleep(1)
                                 m.sendto(json.dumps({"COMMAND": MODIFY_ADD, "FILENAME": filename, "HOST": HOST}).encode('utf-8'), (host, FILE_PORT))
 
                     elif command == GET:
@@ -243,13 +246,13 @@ class Server:
                         # Send size first
                         filesize = os.path.getsize(local_filepath)
                         with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as m:
-                            m.sendto(json.dumps({"FILESIZE": filesize}).encode('utf-8'), (host, FILE_PORT))
+                            m.sendto(json.dumps({"FILESIZE": filesize}).encode('utf-8'), (host, ONE_PORT))
                             with open(local_filepath, "rb") as f:
                                 while True:
                                     bytes_read = f.read(BUFFER_SIZE)
                                     if not bytes_read:
                                         break
-                                    m.sendto(bytes_read, (host, FILE_PORT))
+                                    m.sendto(bytes_read, (host, ONE_PORT))
 
                         time.sleep(3)
 
@@ -265,7 +268,7 @@ class Server:
 
                         
                     elif command == MODIFY_ADD:
-                 
+                        time.sleep(1)
                         filename = request_list['FILENAME']
                         host = request_list["HOST"]
                         self.FILES[host].append(filename)
