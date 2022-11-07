@@ -145,10 +145,7 @@ class Server:
         self.send_file(PUT, filename, filepath, HOST)
         print("AFTER")
 
-        for host in utils.get_all_hosts():
-            with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
-                print("inside one")
-                s.sendto(json.dumps({"COMMAND": MODIFY_ADD, "FILENAME": filename, "HOST": HOST}).encode('utf-8'), (host, FILE_PORT))
+       
         # send out message to every server about where file was uploaded
         # so they can update their global maps
 
@@ -226,7 +223,13 @@ class Server:
                                 f.write(bytes_read)
                          
                                 bytes_written += len(bytes_read)
-                
+                        self.FILES[HOST].append(filename)
+                        for host in utils.get_all_hosts():
+                            if host == HOST:
+                                continue
+                            with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
+                                print("inside one")
+                                s.sendto(json.dumps({"COMMAND": MODIFY_ADD, "FILENAME": filename, "HOST": HOST}).encode('utf-8'), (host, FILE_PORT))
 
                     elif command == GET:
                         filesize = request_list['FILESIZE']
