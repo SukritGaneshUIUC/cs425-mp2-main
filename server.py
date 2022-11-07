@@ -486,6 +486,11 @@ class Server:
             # file commands
             elif (input_str == "6"):
                 self.handle_file()
+            elif (input_str == "7"):
+                print("Selected file_map")
+                for host in self.Files:
+                    for file in host:
+                        print("HOST " + host + ": " + file)
             else:
                 print("Invalid input. Please try again")
 
