@@ -126,7 +126,7 @@ class Server:
                         bytes_read = f.read(BUFFER_SIZE)
                         if not bytes_read:
                             break
-                        s.send(bytes_read)
+                        s.sendto(bytes_read, (host, FILE_PORT))
             except Exception as e:
                 print(e)
 
