@@ -2,6 +2,7 @@ import socket
 import time
 import threading
 import json
+from xml.etree.ElementTree import TreeBuilder
 import utils
 import logging
 from logging.handlers import RotatingFileHandler
@@ -193,33 +194,38 @@ class Server:
     # download file
     def download(self, command, filename, filepath):
         print('Attempting to download \"' + filename + "\" to location \"" + filepath + "\"!")
-
+        check = True
         before_time = time.time()
         for check_host in self.FILES:
-            if filename in self.FILES[check_host] and not check_host == HOST:
-                with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
-                    s.bind((HOST, FILE_PORT_2))
-                    try:
-                        # Step 1: Send file metadata (command, filename, filesize [redundant])
-                        s.sendto(json.dumps({"COMMAND": command, "FILENAME": filename, "FILESIZE": 0, "HOST": HOST}).encode('utf-8'), (check_host, FILE_PORT))
+            if filename in self.FILES[check_host]:
+                check = False
+                if not check_host == HOST:
+                    with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
+                        s.bind((HOST, FILE_PORT_2))
+                        try:
+                            # Step 1: Send file metadata (command, filename, filesize [redundant])
+                            s.sendto(json.dumps({"COMMAND": command, "FILENAME": filename, "FILESIZE": 0, "HOST": HOST}).encode('utf-8'), (check_host, FILE_PORT))
 
-                        # Step 2: Get file data (in chunks of 4096 bytes)
-                        data, _ = s.recvfrom(BUFFER_SIZE)
-                        request = data.decode('utf-8')
-                        request_list = json.loads(request)
-                        filesize = request_list['FILESIZE']
-                        print("receiver" + str(filesize))
-                        bytes_written = 0
-                        with open(filepath, "wb") as f:
-                            while bytes_written < filesize:
-                                
-                                bytes_read, _ = s.recvfrom(BUFFER_SIZE)
-                                f.write(bytes_read)
-                                bytes_written += len(bytes_read)
-                    except Exception as e:
-                        print(e)
+                            # Step 2: Get file data (in chunks of 4096 bytes)
+                            data, _ = s.recvfrom(BUFFER_SIZE)
+                            request = data.decode('utf-8')
+                            request_list = json.loads(request)
+                            filesize = request_list['FILESIZE']
+                            print("receiver" + str(filesize))
+                            bytes_written = 0
+                            with open(filepath, "wb") as f:
+                                while bytes_written < filesize:
+                                    
+                                    bytes_read, _ = s.recvfrom(BUFFER_SIZE)
+                                    f.write(bytes_read)
+                                    bytes_written += len(bytes_read)
+                        except Exception as e:
+                            print(e)
 
         after_time = time.time()
+        if check:
+            print("Sorry but the given file is not in the file system")
+
         print("total download time:", after_time - before_time)
 
     # delete file
@@ -261,8 +267,9 @@ class Server:
                         filesize = request_list['FILESIZE']
                         filename = request_list['FILENAME']
                         print('Saving file \"' + filename + "\".")
-                        latest_version_filepath, latest_version = self.get_latest_version(filename)
-                        local_filepath = os.path.join(FILE_DIRECTORY, filename + '_' + str(latest_version + 1))
+                        # latest_version_filepath, latest_version = self.get_latest_version(filename)
+                        # local_filepath = os.path.join(FILE_DIRECTORY, filename + '_' + str(latest_version))
+                        local_filepath = os.path.join(FILE_DIRECTORY, filename)
                         bytes_written = 0
                     
                         with open(local_filepath, "wb") as f:
@@ -277,19 +284,20 @@ class Server:
 
                         for host in utils.get_all_hosts():
                             with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as m:
-                                time.sleep(0.5)
+                                time.sleep(0.1)
                                 m.sendto(json.dumps({"COMMAND": MODIFY_ADD, "FILENAME": filename, "HOST": HOST}).encode('utf-8'), (host, FILE_PORT))
 
                     elif command == GET or command == GET_VERSIONS:
                         filesize = request_list['FILESIZE']
                         filename = request_list['FILENAME']
                         print('Sending file \"' + filename + "\".")
-                        # local_filepath = os.path.join(FILE_DIRECTORY, filename)
+                        
                         local_filepath = ""
                         if (command == GET):
                             local_filepath, _ = self.get_latest_version(filename)
                         else:
                             local_filepath = self.create_version_superfile(filename)
+                        local_filepath = os.path.join(FILE_DIRECTORY, filename)
                         host = request_list["HOST"]
                         # Send size first
                         filesize = os.path.getsize(local_filepath)
@@ -559,6 +567,10 @@ class Server:
                     for file in self.FILES[check_host]:
                         print(file, end=", ")
                     print("\n")
+            elif (input_str == "8"):
+                for file in self.FILES[HOST]:
+                    print(file, end=", ")
+                print("\n")
             else:
                 print("Invalid input. Please try again")
 
