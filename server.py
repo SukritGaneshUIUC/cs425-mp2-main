@@ -153,29 +153,33 @@ class Server:
     def download(self, filename, filepath):
         print('Attempting to download \"' + filename + "\" to location \"" + filepath + "\"!")
 
-        # we will download file from any server which stores it
-        download_dest = IP
-        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
-            s.connect((download_dest, FILE_PORT))
-            try:
-                # Step 1: Send file metadata (command, filename, filesize [redundant])
-                s.send(json.dumps({"COMMAND": GET, "FILENAME": filename, "FILESIZE": 0, "HOST": HOST}).encode('utf-8'))
+        for check_host in self.FILES:
+            if filename in self.FILES[check_host] and not check_host == HOST:
+                with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
+                    try:
+                        # Step 1: Send file metadata (command, filename, filesize [redundant])
+                        s.sendto(json.dumps({"COMMAND": GET, "FILENAME": filename, "FILESIZE": 0, "HOST": HOST}).encode('utf-8'), (check_host, FILE_PORT))
 
-                # Step 2: Get file data (in chunks of 4096 bytes)
-                data, _ = s.recv(BUFFER_SIZE)
-                request = data.decode('utf-8')
-                request_list = json.loads(request)
-                filesize = request_list['FILESIZE']
-                print("receiver" + str(filesize))
-                bytes_written = 0
-                with open(filepath, "wb") as f:
-                    while bytes_written < filesize:
-                        print('ll:', len(bytes_read))
-                        bytes_read, _ = s.recv(BUFFER_SIZE)
-                        f.write(bytes_read)
-                        bytes_written += len(bytes_read)
-            except Exception as e:
-                print(e)
+                        # Step 2: Get file data (in chunks of 4096 bytes)
+                        data, _ = s.recv(BUFFER_SIZE)
+                        request = data.decode('utf-8')
+                        request_list = json.loads(request)
+                        filesize = request_list['FILESIZE']
+                        print("receiver" + str(filesize))
+                        bytes_written = 0
+                        with open(filepath, "wb") as f:
+                            while bytes_written < filesize:
+                                print('ll:', len(bytes_read))
+                                bytes_read, _ = s.recv(BUFFER_SIZE)
+                                f.write(bytes_read)
+                                bytes_written += len(bytes_read)
+
+                        for host in utils.get_all_hosts():
+                            with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as m:
+                                print("inside one")
+                                m.sendto(json.dumps({"COMMAND": MODIFY_ADD, "FILENAME": filename, "HOST": HOST}).encode('utf-8'), (host, FILE_PORT))
+                    except Exception as e:
+                        print(e)
 
     # delete file
     def delete(self, filename, filepath):
@@ -225,7 +229,6 @@ class Server:
                                 bytes_written += len(bytes_read)
 
                         for host in utils.get_all_hosts():
-                
                             with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as m:
                                 print("inside one")
                                 m.sendto(json.dumps({"COMMAND": MODIFY_ADD, "FILENAME": filename, "HOST": HOST}).encode('utf-8'), (host, FILE_PORT))
@@ -256,10 +259,8 @@ class Server:
                         local_filepath = os.path.join(FILE_DIRECTORY, filename)
                         os.remove(local_filepath)
                         for check_host in self.FILES:
-                            print("here")
-                            if local_filepath in self.FILES[check_host]:
-                                print("check")
-                                self.FILES[check_host].remove(local_filepath)
+                            if filename in self.FILES[check_host]:
+                                self.FILES[check_host].remove(filename)
                                 
 
                         
