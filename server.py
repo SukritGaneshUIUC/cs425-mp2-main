@@ -214,6 +214,7 @@ class Server:
                         bytes_written = 0
                         print("onere")
                         with open(local_filepath, "wb") as f:
+                            print("no way")
                             while bytes_written < filesize:
                                 bytes_read, _ = s.recvfrom(BUFFER_SIZE)
                                 f.write(bytes_read)
