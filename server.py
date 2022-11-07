@@ -500,6 +500,9 @@ class Server:
                             self.MembershipList[hostname] = (value[0], utils.Status.LEAVE)
                             monitor_logger.info("Encounter timeout after:")
                             monitor_logger.info(json.dumps(self.MembershipList))
+                            for file in self.FILES[hostname]:
+                                self.download(GET, file, FILE_DIRECTORY)
+                                self.upload(file, FILE_DIRECTORY)
                         self.last_update.pop(hostname, None)
                 
                 self.time_lock.release()
