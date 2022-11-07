@@ -242,7 +242,9 @@ class Server:
                         host = request_list["HOST"]
                         # Send size first
                         filesize = os.path.getsize(local_filepath)
-                        s.sendto(json.dumps({"FILESIZE": filesize}).encode('utf-8'), (host, FILE_PORT))
+                        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as m:
+                             m.sendto(json.dumps({"FILESIZE": filesize}).encode('utf-8'), (host, FILE_PORT))
+                       
 
                         # Then send file
                         with open(local_filepath, "rb") as f:
