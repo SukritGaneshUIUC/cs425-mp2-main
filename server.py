@@ -117,7 +117,7 @@ class Server:
             try:
                 # Step 1: Send file metadata (command, filename, filesize)
                 filesize = os.path.getsize(filepath)
-                print("sender" + filesize)
+                print("sender" + str(filesize))
                 s.sendto(json.dumps({"COMMAND": PUT, "FILENAME": filename, "FILESIZE": filesize}).encode('utf-8'), (host, FILE_PORT))
                 print("SENDS")
                 # Step 2: Send file data (in chunks of 4096 bytes)
@@ -165,7 +165,7 @@ class Server:
                 request = data.decode('utf-8')
                 request_list = json.loads(request)
                 filesize = request_list['FILESIZE']
-                print("receiver" + filesize)
+                print("receiver" + str(filesize))
                 bytes_written = 0
                 with open(filepath, "wb") as f:
                     while bytes_written < filesize:
