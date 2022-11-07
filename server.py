@@ -188,6 +188,7 @@ class Server:
         print("file program started")
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         s.bind((HOST, FILE_PORT))
+        print(HOST)
         file_logger.info('file program started')
         while True:
             print("running!")
