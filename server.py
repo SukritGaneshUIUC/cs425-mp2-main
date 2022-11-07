@@ -214,17 +214,19 @@ class Server:
                         bytes_written = 0
                     
                         with open(local_filepath, "wb") as f:
-                            print("no way")
+                       
                             while bytes_written < filesize:
-                                print("once")
+                
                                 bytes_read, _ = s.recvfrom(BUFFER_SIZE)
-                                print("again")
+                     
                                 f.write(bytes_read)
-                                print("check")
+                         
                                 bytes_written += len(bytes_read)
                         
+
                         for host in utils.get_all_hosts():
                             with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
+                                print("inside here")
                                 s.sendto(json.dumps({"COMMAND": MODIFY_ADD, "FILENAME": filename, "HOST": HOST}).encode('utf-8'), (host, FILE_PORT))
                 
 
@@ -259,6 +261,7 @@ class Server:
                                 s.sendto(json.dumps({"COMMAND": MODIFY_DEL, "FILENAME": filename, "HOST": HOST}).encode('utf-8'), (host, FILE_PORT))
 
                     elif command == MODIFY_ADD:
+                        print("inside here")
                         filename = request_list['FILENAME']
                         host = request_list["HOST"]
                         self.FILES[host].append(filename)
