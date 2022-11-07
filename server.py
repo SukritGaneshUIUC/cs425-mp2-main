@@ -57,7 +57,7 @@ class Server:
             HOST: (timestamp, utils.Status.LEAVE)}
         self.FILES = {}
         for host in utils.get_all_hosts():
-            self.FILES[host] = []
+            self.FILES[host] = [""]
         self.time_lock = threading.Lock()
         self.ml_lock = threading.Lock()
         self.file_lock = threading.Lock()
