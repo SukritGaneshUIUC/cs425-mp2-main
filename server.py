@@ -180,6 +180,7 @@ class Server:
                                 m.sendto(json.dumps({"COMMAND": MODIFY_ADD, "FILENAME": filename, "HOST": HOST}).encode('utf-8'), (host, FILE_PORT))
                     except Exception as e:
                         print(e)
+        print("checkdown")
 
     # delete file
     def delete(self, filename, filepath):
