@@ -205,6 +205,10 @@ class Server:
         print('Attempting to download \"' + filename + "\" to location \"" + filepath + "\"!")
         check = True
         before_time = time.time()
+        if command == GET_VERSIONS:
+            num_version = input("Please enter the name of the file you'd like to perform the command on.")
+            local_filepath = self.create_version_superfile(filename, int(num_version))
+            return
         for check_host in self.FILES:
             if filename in self.FILES[check_host]:
                 check = False
@@ -213,10 +217,8 @@ class Server:
                         s.bind((HOST, FILE_PORT_2))
                         try:
                             # Step 1: Send file metadata (command, filename, filesize [redundant])
-                            num_version = ""
-                            if(command == GET_VERSIONS):
-                                num_version = input("Please enter the name of the file you'd like to perform the command on.")
-                            s.sendto(json.dumps({"COMMAND": command, "FILENAME": filename, "FILESIZE": 0, "HOST": HOST, "VERSION": num_version}).encode('utf-8'), (check_host, FILE_PORT))
+
+                            s.sendto(json.dumps({"COMMAND": command, "FILENAME": filename, "FILESIZE": 0, "HOST": HOST}).encode('utf-8'), (check_host, FILE_PORT))
 
                             # Step 2: Get file data (in chunks of 4096 bytes)
                             data, _ = s.recvfrom(BUFFER_SIZE)
@@ -233,7 +235,7 @@ class Server:
                                     bytes_written += len(bytes_read)
                         except Exception as e:
                             print(e)
-
+        
         after_time = time.time()
         if check:
             print("Sorry but the given file is not in the file system")
@@ -298,20 +300,16 @@ class Server:
                                 time.sleep(0.1)
                                 m.sendto(json.dumps({"COMMAND": MODIFY_ADD, "FILENAME": filename, "HOST": HOST}).encode('utf-8'), (host, FILE_PORT))
 
-                    elif command == GET or command == GET_VERSIONS:
+                    elif command == GET:
                         filesize = request_list['FILESIZE']
                         filename = request_list['FILENAME']
                         print('Sending file \"' + filename + "\".")
                         
                         local_filepath = ""
-                        if (command == GET):
-                            print("befre")
-                            local_filepath, _ = self.get_latest_version(filename)
-                            local_filepath = os.path.join(FILE_DIRECTORY, local_filepath)
-                            print("after " + local_filepath)
-                        else:
-                            version = request_list["VERSION"]
-                            local_filepath = self.create_version_superfile(filename, int(version))
+                        print("befre")
+                        local_filepath, _ = self.get_latest_version(filename)
+                        local_filepath = os.path.join(FILE_DIRECTORY, local_filepath)
+                        print("after " + local_filepath)
                         
 
                         host = request_list["HOST"]
