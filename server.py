@@ -280,7 +280,7 @@ class Server:
 
         return: None
         '''
-        print("sender started")
+        
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         while True:
             time.sleep(0.3)
