@@ -171,7 +171,7 @@ class Server:
                         bytes_written = 0
                         with open(filepath, "wb") as f:
                             while bytes_written < filesize:
-                                print('ll:', len(bytes_read))
+                                
                                 bytes_read, _ = s.recvfrom(BUFFER_SIZE)
                                 f.write(bytes_read)
                                 bytes_written += len(bytes_read)
