@@ -256,7 +256,9 @@ class Server:
                         local_filepath = os.path.join(FILE_DIRECTORY, filename)
                         os.remove(local_filepath)
                         for check_host in self.FILES:
+                            print("here")
                             if local_filepath in self.FILES[check_host]:
+                                print("check")
                                 self.FILES[check_host].remove(local_filepath)
                                 
 
