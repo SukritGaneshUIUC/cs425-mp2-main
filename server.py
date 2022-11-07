@@ -118,7 +118,7 @@ class Server:
                 # Step 1: Send file metadata (command, filename, filesize)
                 filesize = os.path.getsize(filepath)
                 print(host)
-                s.send(json.dumps({"COMMAND": PUT, "FILENAME": filename, "FILESIZE": filesize}).encode('utf-8'), (host, FILE_PORT))
+                s.sendto(json.dumps({"COMMAND": PUT, "FILENAME": filename, "FILESIZE": filesize}).encode('utf-8'), (host, FILE_PORT))
                 print("SENDS")
                 # Step 2: Send file data (in chunks of 4096 bytes)
                 # with open(filepath, "rb") as f:
@@ -180,7 +180,7 @@ class Server:
     def delete(self, filename, filepath):
         for host in utils.get_all_hosts():
             with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
-                s.send(json.dumps({"COMMAND": DELETE, "FILENAME": filename, "FILESIZE": 0}).encode('utf-8'), (host, FILE_PORT))
+                s.sendto(json.dumps({"COMMAND": DELETE, "FILENAME": filename, "FILESIZE": 0}).encode('utf-8'), (host, FILE_PORT))
 
     # general program to handle file requests
     # this runs on its own thread and uses its own own port
@@ -220,7 +220,7 @@ class Server:
                         
                         for host in utils.get_all_hosts():
                             with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
-                                s.send(json.dumps({"COMMAND": MODIFY_ADD, "FILENAME": filename, "HOST": HOST}).encode('utf-8'), (host, FILE_PORT))
+                                s.sendto(json.dumps({"COMMAND": MODIFY_ADD, "FILENAME": filename, "HOST": HOST}).encode('utf-8'), (host, FILE_PORT))
                 
 
                     elif command == GET:
@@ -251,7 +251,7 @@ class Server:
 
                         for host in utils.get_all_hosts():
                             with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
-                                s.send(json.dumps({"COMMAND": MODIFY_DEL, "FILENAME": filename, "HOST": HOST}).encode('utf-8'), (host, FILE_PORT))
+                                s.sendto(json.dumps({"COMMAND": MODIFY_DEL, "FILENAME": filename, "HOST": HOST}).encode('utf-8'), (host, FILE_PORT))
 
                     elif command == MODIFY_ADD:
                         filename = request_list['FILENAME']
