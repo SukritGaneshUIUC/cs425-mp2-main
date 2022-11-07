@@ -163,7 +163,7 @@ class Server:
                         s.sendto(json.dumps({"COMMAND": GET, "FILENAME": filename, "FILESIZE": 0, "HOST": HOST}).encode('utf-8'), (check_host, FILE_PORT))
 
                         # Step 2: Get file data (in chunks of 4096 bytes)
-                        data, _ = s.recv(BUFFER_SIZE)
+                        data, _ = s.recvfrom(BUFFER_SIZE)
                         request = data.decode('utf-8')
                         request_list = json.loads(request)
                         filesize = request_list['FILESIZE']
@@ -172,7 +172,7 @@ class Server:
                         with open(filepath, "wb") as f:
                             while bytes_written < filesize:
                                 print('ll:', len(bytes_read))
-                                bytes_read, _ = s.recv(BUFFER_SIZE)
+                                bytes_read, _ = s.recvfrom(BUFFER_SIZE)
                                 f.write(bytes_read)
                                 bytes_written += len(bytes_read)
 
