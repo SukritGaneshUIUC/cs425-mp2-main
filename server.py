@@ -212,6 +212,7 @@ class Server:
                         s.bind((HOST, FILE_PORT_2))
                         try:
                             # Step 1: Send file metadata (command, filename, filesize [redundant])
+                            num_version = ""
                             if(command == GET_VERSIONS):
                                 num_version = input("Please enter the name of the file you'd like to perform the command on.")
                             s.sendto(json.dumps({"COMMAND": command, "FILENAME": filename, "FILESIZE": 0, "HOST": HOST, "VERSION": num_version}).encode('utf-8'), (check_host, FILE_PORT))
