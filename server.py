@@ -79,7 +79,7 @@ class Server:
             v = val[1]
             if (fn == filename):
                 vc += 1
-            if v != "superfile" and (int(v) > max_v):
+            if (int(v) > max_v):
                 max_v = int(v)
                 max_version_filename = f
         print("once")
@@ -95,19 +95,16 @@ class Server:
 
     # create superfile which is all versions concatenated (to send back to user)
     def create_version_superfile(self, filename, version):
-        sf_filepath = os.path.join(FILE_DIRECTORY, (filename + "_superfile"))
         check, max_version = self.get_latest_version(filename)
-        nf = open(sf_filepath, "w")
+        nf = open(filename + "_superfile", "w")
         allfiles = os.listdir(FILE_DIRECTORY)
         
         for f in allfiles:
             val = f.split('_')
             fn = val[0]
             v = val[1]
-            print(max_version)
-            print(version)
-            print(f)
-            if (fn == filename) and v != "superfile" and int(v) > max_version - version:
+        
+            if (fn == filename) and int(v) > max_version - version - 1:
                 print("just wrote version " + v)
                 curr_version_filepath = os.path.join(FILE_DIRECTORY, f)
                 cvf = open(curr_version_filepath, "r")
@@ -115,7 +112,7 @@ class Server:
                 nf.write('; just wrote version ' + v)
                 cvf.close()
         nf.close()
-        return sf_filepath
+        return filename
 
     # New process joining: must contact introducer
     def join(self):
