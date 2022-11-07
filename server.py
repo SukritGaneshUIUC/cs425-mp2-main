@@ -94,17 +94,20 @@ class Server:
                 os.remove(os.path.join(FILE_DIRECTORY, f))
 
     # create superfile which is all versions concatenated (to send back to user)
-    def create_version_superfile(self, filename):
+    def create_version_superfile(self, filename, version):
         sf_filepath = os.path.join(FILE_DIRECTORY, (filename + "_superfile"))
         nf = open(sf_filepath, "w")
         allfiles = os.listdir(FILE_DIRECTORY)
+        check, max_version = self.get_latest_version(filename)
         for f in allfiles:
-            fn, v = f.split('_')
-            if (fn == filename):
-                curr_version_filepath = os.path.join(FILE_DIRECTORY, fn)
+            val = f.split('_')
+            fn = val[0]
+            v = val[1]
+            if (fn == filename) and int(v) > max_version - version:
+                curr_version_filepath = os.path.join(FILE_DIRECTORY, f)
                 cvf = open(curr_version_filepath, "r")
                 nf.write(cvf.read())
-                nf.write(';')
+                nf.write('; just wrote version ' + v)
                 cvf.close()
         nf.close()
         return sf_filepath
@@ -209,7 +212,9 @@ class Server:
                         s.bind((HOST, FILE_PORT_2))
                         try:
                             # Step 1: Send file metadata (command, filename, filesize [redundant])
-                            s.sendto(json.dumps({"COMMAND": command, "FILENAME": filename, "FILESIZE": 0, "HOST": HOST}).encode('utf-8'), (check_host, FILE_PORT))
+                            if(command == GET_VERSIONS):
+                                num_version = input("Please enter the name of the file you'd like to perform the command on.")
+                            s.sendto(json.dumps({"COMMAND": command, "FILENAME": filename, "FILESIZE": 0, "HOST": HOST, "VERSION": num_version}).encode('utf-8'), (check_host, FILE_PORT))
 
                             # Step 2: Get file data (in chunks of 4096 bytes)
                             data, _ = s.recvfrom(BUFFER_SIZE)
@@ -300,10 +305,12 @@ class Server:
                         if (command == GET):
                             print("befre")
                             local_filepath, _ = self.get_latest_version(filename)
+                            local_filepath = os.path.join(FILE_DIRECTORY, local_filepath)
                             print("after " + local_filepath)
                         else:
-                            local_filepath = self.create_version_superfile(filename)
-                        local_filepath = os.path.join(FILE_DIRECTORY, local_filepath)
+                            version = request_list["VERSION"]
+                            local_filepath = self.create_version_superfile(filename, int(version))
+                        
 
                         host = request_list["HOST"]
                         # Send size first
@@ -423,6 +430,8 @@ class Server:
                         self.MembershipList[sender_host] = (str(int(time.time())), utils.Status.NEW)
                         recv_logger.info("Encounter join after:")
                         recv_logger.info(json.dumps(self.MembershipList))
+
+
                         
                         if HOST == utils.INTRODUCER_HOST:
                             recv_logger.info("introducer recv connection from new joiner: " + str(addr))
