@@ -230,7 +230,6 @@ class Server:
                             bytes_written = 0
                             with open(filepath, "wb") as f:
                                 while bytes_written < filesize:
-                                    
                                     bytes_read, _ = s.recvfrom(BUFFER_SIZE)
                                     f.write(bytes_read)
                                     bytes_written += len(bytes_read)
@@ -501,9 +500,6 @@ class Server:
                             self.MembershipList[hostname] = (value[0], utils.Status.LEAVE)
                             monitor_logger.info("Encounter timeout after:")
                             monitor_logger.info(json.dumps(self.MembershipList))
-                            for file in self.FILES[hostname]:
-                                self.download(GET, file, FILE_DIRECTORY)
-                                self.upload(file, FILE_DIRECTORY)
                         self.last_update.pop(hostname, None)
                 
                 self.time_lock.release()
