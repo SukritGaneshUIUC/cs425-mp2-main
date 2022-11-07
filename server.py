@@ -212,6 +212,7 @@ class Server:
                         print('Saving file \"' + filename + "\".")
                         local_filepath = os.path.join(FILE_DIRECTORY, filename)
                         bytes_written = 0
+                        print("onere")
                         with open(local_filepath, "wb") as f:
                             while bytes_written < filesize:
                                 bytes_read, _ = s.recvfrom(BUFFER_SIZE)
