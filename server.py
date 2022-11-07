@@ -272,9 +272,8 @@ class Server:
                         filesize = request_list['FILESIZE']
                         filename = request_list['FILENAME']
                         print('Saving file \"' + filename + "\".")
-                        # latest_version_filepath, latest_version = self.get_latest_version(filename)
-                        # local_filepath = os.path.join(FILE_DIRECTORY, filename + '_' + str(latest_version))
-                        local_filepath = os.path.join(FILE_DIRECTORY, filename)
+                        latest_version_filepath, latest_version = self.get_latest_version(filename)
+                        local_filepath = os.path.join(FILE_DIRECTORY, filename + '_' + str(latest_version))
                         bytes_written = 0
                     
                         with open(local_filepath, "wb") as f:
