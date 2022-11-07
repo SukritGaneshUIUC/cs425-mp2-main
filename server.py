@@ -180,7 +180,6 @@ class Server:
                                 m.sendto(json.dumps({"COMMAND": MODIFY_ADD, "FILENAME": filename, "HOST": HOST}).encode('utf-8'), (host, FILE_PORT))
                     except Exception as e:
                         print(e)
-        print("checkdown")
 
     # delete file
     def delete(self, filename, filepath):
@@ -270,6 +269,7 @@ class Server:
                         filename = request_list['FILENAME']
                         host = request_list["HOST"]
                         self.FILES[host].append(filename)
+                        print("ADDED FROM " + host)
 
                     
                     elif command == TRANSFER:
