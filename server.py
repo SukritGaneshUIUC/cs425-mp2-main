@@ -121,12 +121,12 @@ class Server:
                 s.sendto(json.dumps({"COMMAND": PUT, "FILENAME": filename, "FILESIZE": filesize}).encode('utf-8'), (host, FILE_PORT))
                 print("SENDS")
                 # Step 2: Send file data (in chunks of 4096 bytes)
-                # with open(filepath, "rb") as f:
-                #     while True:
-                #         bytes_read = f.read(BUFFER_SIZE)
-                #         if not bytes_read:
-                #             break
-                #         s.send(bytes_read)
+                with open(filepath, "rb") as f:
+                    while True:
+                        bytes_read = f.read(BUFFER_SIZE)
+                        if not bytes_read:
+                            break
+                        s.send(bytes_read)
             except Exception as e:
                 print(e)
 
@@ -216,8 +216,11 @@ class Server:
                         with open(local_filepath, "wb") as f:
                             print("no way")
                             while bytes_written < filesize:
+                                print("once")
                                 bytes_read, _ = s.recvfrom(BUFFER_SIZE)
+                                print("again")
                                 f.write(bytes_read)
+                                print("check")
                                 bytes_written += len(bytes_read)
                         
                         for host in utils.get_all_hosts():
