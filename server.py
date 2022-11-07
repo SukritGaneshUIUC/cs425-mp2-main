@@ -26,6 +26,7 @@ GET = "GET"
 DELETE = "DEL"
 GET_VERSIONS = "GET-V"
 TRANSFER = "TRANSFER"
+HOST_FAIL = "HOST_FAIL"
 MODIFY_ADD = "MODIFY_ADD"
 FILE_COMMANDS = (PUT, GET, DELETE, GET_VERSIONS, TRANSFER, MODIFY_ADD)
 
@@ -326,7 +327,7 @@ class Server:
                                     m.sendto(bytes_read, (host, FILE_PORT_2))
 
                         time.sleep(3)
-
+                    
                     elif command == DELETE:
                         filename = request_list['FILENAME']
                         print('Deleting file \"' + filename + "\".")
@@ -337,7 +338,9 @@ class Server:
                             if filename in self.FILES[check_host]:
                                 self.FILES[check_host].remove(filename)
                                 
-
+                    elif command == HOST_FAIL:
+                        host = request_list["HOST"]
+                        self.FILES[host] = []
                         
                     elif command == MODIFY_ADD:
                         filename = request_list['FILENAME']
@@ -502,7 +505,13 @@ class Server:
                             monitor_logger.info(json.dumps(self.MembershipList))
                             for file in self.FILES[hostname]:
                                 self.download(GET, file, FILE_DIRECTORY)
+                                time.sleep(0.1)
                                 self.upload(file, FILE_DIRECTORY)
+                            self.FILES[hostname] = []
+                            for host in utils.get_all_hosts():
+                                with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as m:
+                                    time.sleep(0.1)
+                                    m.sendto(json.dumps({"COMMAND": HOST_FAIL,  "HOST": hostname}).encode('utf-8'), (host, FILE_PORT))
                         self.last_update.pop(hostname, None)
                 
                 self.time_lock.release()
