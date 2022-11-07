@@ -24,8 +24,7 @@ DELETE = "DEL"
 GET_VERSIONS = "GET-V"
 TRANSFER = "TRANSFER"
 MODIFY_ADD = "MODIFY_ADD"
-MODIFY_DEL = "MODIFY_DEL"
-FILE_COMMANDS = (PUT, GET, DELETE, GET_VERSIONS, TRANSFER, MODIFY_ADD, MODIFY_DEL)
+FILE_COMMANDS = (PUT, GET, DELETE, GET_VERSIONS, TRANSFER, MODIFY_ADD)
 
 
 
@@ -145,6 +144,11 @@ class Server:
         print("here")
         self.send_file(PUT, filename, filepath, HOST)
         print("AFTER")
+
+        for host in utils.get_all_hosts():
+            with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
+                print("inside one")
+                s.sendto(json.dumps({"COMMAND": MODIFY_ADD, "FILENAME": filename, "HOST": HOST}).encode('utf-8'), (host, FILE_PORT))
         # send out message to every server about where file was uploaded
         # so they can update their global maps
 
@@ -222,12 +226,6 @@ class Server:
                                 f.write(bytes_read)
                          
                                 bytes_written += len(bytes_read)
-                        
-
-                        for host in utils.get_all_hosts():
-                            with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
-                                print("inside one")
-                                s.sendto(json.dumps({"COMMAND": MODIFY_ADD, "FILENAME": filename, "HOST": HOST}).encode('utf-8'), (host, FILE_PORT))
                 
 
                     elif command == GET:
@@ -255,21 +253,18 @@ class Server:
                         print('Deleting file \"' + filename + "\".")
                         local_filepath = os.path.join(FILE_DIRECTORY, filename)
                         os.remove(local_filepath)
+                        for check_host in self.FILES:
+                            if local_filepath in self.FILES[check_host]:
+                                self.FILES[check_host].remove(local_filepath)
+                                
 
-                        for host in utils.get_all_hosts():
-                            with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
-                                s.sendto(json.dumps({"COMMAND": MODIFY_DEL, "FILENAME": filename, "HOST": HOST}).encode('utf-8'), (host, FILE_PORT))
-
+                        
                     elif command == MODIFY_ADD:
                         print("inside here")
                         filename = request_list['FILENAME']
                         host = request_list["HOST"]
                         self.FILES[host].append(filename)
 
-                    elif command == MODIFY_DEL:
-                        filename = request_list['FILENAME']
-                        host = request_list["HOST"]
-                        self.FILES[host].remove(filename)
                     
                     elif command == TRANSFER:
                         print('saving file without version updates')
