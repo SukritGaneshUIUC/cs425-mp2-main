@@ -189,6 +189,7 @@ class Server:
         s.bind((HOST, FILE_PORT))
         file_logger.info('file program started')
         while True:
+            print("running!")
             try:
                 data, addr = s.recvfrom(BUFFER_SIZE)
                 file_logger.info("FILE connection from: " + str(addr) + " with data: " + data.decode())
