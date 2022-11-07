@@ -119,14 +119,14 @@ class Server:
                 filesize = os.path.getsize(filepath)
                 print(host)
                 s.send(json.dumps({"COMMAND": PUT, "FILENAME": filename, "FILESIZE": filesize}).encode('utf-8'), (host, FILE_PORT))
-
+                print("SENDS")
                 # Step 2: Send file data (in chunks of 4096 bytes)
-                with open(filepath, "rb") as f:
-                    while True:
-                        bytes_read = f.read(BUFFER_SIZE)
-                        if not bytes_read:
-                            break
-                        s.send(bytes_read)
+                # with open(filepath, "rb") as f:
+                #     while True:
+                #         bytes_read = f.read(BUFFER_SIZE)
+                #         if not bytes_read:
+                #             break
+                #         s.send(bytes_read)
             except Exception as e:
                 print(e)
 
@@ -193,6 +193,7 @@ class Server:
         while True:
             print("running!")
             try:
+                print("try please")
                 data, addr = s.recvfrom(BUFFER_SIZE)
                 file_logger.info("FILE connection from: " + str(addr) + " with data: " + data.decode())
                 if data:
