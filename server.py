@@ -74,7 +74,9 @@ class Server:
         max_version_filename = ""
         print("runit")
         for f in allfiles:
-            fn, v = f.split('_')
+            val = f.split('_')
+            fn = val[0]
+            v = val[1]
             if (fn == filename):
                 vc += 1
             if (int(v) > max_v):
