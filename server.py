@@ -234,7 +234,7 @@ class Server:
 
                         for host in utils.get_all_hosts():
                             with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as m:
-                                time.sleep(1)
+                                
                                 m.sendto(json.dumps({"COMMAND": MODIFY_ADD, "FILENAME": filename, "HOST": HOST}).encode('utf-8'), (host, FILE_PORT))
 
                     elif command == GET:
@@ -268,7 +268,7 @@ class Server:
 
                         
                     elif command == MODIFY_ADD:
-                        time.sleep(1)
+                   
                         filename = request_list['FILENAME']
                         host = request_list["HOST"]
                         self.FILES[host].append(filename)
