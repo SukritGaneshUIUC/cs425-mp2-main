@@ -57,7 +57,7 @@ class Server:
             HOST: (timestamp, utils.Status.LEAVE)}
         self.FILES = {}
         for host in utils.get_all_hosts():
-            self.FILES[host] = [""]
+            self.FILES[host] = []
         self.time_lock = threading.Lock()
         self.ml_lock = threading.Lock()
         self.file_lock = threading.Lock()
@@ -490,7 +490,7 @@ class Server:
                 print("Selected file_map")
                 for check_host in self.FILES:
                     print("HOST: " + check_host)
-                    for file in check_host:
+                    for file in self.FILES[check_host]:
                         print(file, end=", ")
                     print("\n")
             else:
