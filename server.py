@@ -64,6 +64,45 @@ class Server:
         # record the time current process receives last ack from its neighbors
         self.last_update = {}
 
+    # get name of latest version, as well as the version of the new file to be stored
+    def get_latest_version(self, filename):
+        allfiles = os.listdir(FILE_DIRECTORY)
+        vc = 0
+        max_v = -1
+        max_version_filename = ""
+        for f in allfiles:
+            fn, v = f.split('_')
+            if (fn == filename):
+                vc += 1
+            if (int(v) > max_v):
+                max_v = int(v)
+                max_version_filename = f
+        return max_version_filename, vc
+
+    # delete all versions of a file
+    def delete_all_files(self, filename):
+        allfiles = os.listdir(FILE_DIRECTORY)
+        for f in allfiles:
+            fn, v = f.split('_')
+            if (fn == filename):
+                os.remove(os.path.join(FILE_DIRECTORY, f))
+
+    # create superfile which is all versions concatenated (to send back to user)
+    def create_version_superfile(self, filename):
+        sf_filepath = os.path.join(FILE_DIRECTORY, (filename + "_superfile"))
+        nf = open(sf_filepath, "w")
+        allfiles = os.listdir(FILE_DIRECTORY)
+        for f in allfiles:
+            fn, v = f.split('_')
+            if (fn == filename):
+                curr_version_filepath = os.path.join(FILE_DIRECTORY, fn)
+                cvf = open(curr_version_filepath, "r")
+                nf.write(cvf.read())
+                nf.write(';')
+                cvf.close()
+        nf.close()
+        return sf_filepath
+
     # New process joining: must contact introducer
     def join(self):
         '''
@@ -95,7 +134,7 @@ class Server:
             return 1
         filename = input("Please enter the name of the file you'd like to perform the command on.")
         filepath = ""
-        if (command == PUT or command == GET):
+        if (command == PUT or command == GET or command == GET_VERSIONS):
             filepath = input("Please enter local filepath.")
             if (command == PUT and not os.path.exists(filepath)):
                 print("File at \"" + filepath + "\" does not exist!")
@@ -104,10 +143,10 @@ class Server:
         # call relevant function
         if (command == PUT):
             self.upload(filename, filepath)
-        elif (command == GET):
-            self.download(filename, filepath)
+        elif (command == GET or command == GET_VERSIONS):
+            self.download(command, filename, filepath)
         elif (command == DELETE):
-            self.delete(filename, filepath)
+            self.delete(filename)
 
     # send file
     def send_file(self, command, filename, filepath, host):
@@ -130,8 +169,6 @@ class Server:
             except Exception as e:
                 print(e)
 
-    # receive file
-
     # upload file
     def upload(self, filename, filepath):
         print('Attempting to upload \"' + filename + "\" at location \"" + filepath + "\"!")
@@ -139,11 +176,14 @@ class Server:
 
         # we will send file to ourselves AND next three in the ring for redundancy
         print("BEFORE")
+        before_time = time.time()
         print(socket.gethostbyname(HOST))
         for host in utils.get_neighbors(HOST):
             self.send_file(PUT, filename, filepath, host)
         print("here")
         self.send_file(PUT, filename, filepath, HOST)
+        after_time = time.time()
+        print("total upload time:", after_time - before_time)
         print("AFTER")
 
        
@@ -151,16 +191,17 @@ class Server:
         # so they can update their global maps
 
     # download file
-    def download(self, filename, filepath):
+    def download(self, command, filename, filepath):
         print('Attempting to download \"' + filename + "\" to location \"" + filepath + "\"!")
 
+        before_time = time.time()
         for check_host in self.FILES:
             if filename in self.FILES[check_host] and not check_host == HOST:
                 with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
                     s.bind((HOST, FILE_PORT_2))
                     try:
                         # Step 1: Send file metadata (command, filename, filesize [redundant])
-                        s.sendto(json.dumps({"COMMAND": GET, "FILENAME": filename, "FILESIZE": 0, "HOST": HOST}).encode('utf-8'), (check_host, FILE_PORT))
+                        s.sendto(json.dumps({"COMMAND": command, "FILENAME": filename, "FILESIZE": 0, "HOST": HOST}).encode('utf-8'), (check_host, FILE_PORT))
 
                         # Step 2: Get file data (in chunks of 4096 bytes)
                         data, _ = s.recvfrom(BUFFER_SIZE)
@@ -178,11 +219,18 @@ class Server:
                     except Exception as e:
                         print(e)
 
+        after_time = time.time()
+        print("total download time:", after_time - before_time)
+
     # delete file
-    def delete(self, filename, filepath):
+    def delete(self, filename):
         for host in utils.get_all_hosts():
             with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
                 s.sendto(json.dumps({"COMMAND": DELETE, "FILENAME": filename, "FILESIZE": 0}).encode('utf-8'), (host, FILE_PORT))
+
+    # get-versions command
+    def get_versions(self, filename, filepath):
+        print("getting all versions of", filename, "and saving to", filepath)
 
     # general program to handle file requests
     # this runs on its own thread and uses its own own port
@@ -213,7 +261,8 @@ class Server:
                         filesize = request_list['FILESIZE']
                         filename = request_list['FILENAME']
                         print('Saving file \"' + filename + "\".")
-                        local_filepath = os.path.join(FILE_DIRECTORY, filename)
+                        latest_version_filepath, latest_version = self.get_latest_version(filename)
+                        local_filepath = os.path.join(FILE_DIRECTORY, filename + '_' + str(latest_version + 1))
                         bytes_written = 0
                     
                         with open(local_filepath, "wb") as f:
@@ -231,11 +280,16 @@ class Server:
                                 time.sleep(0.5)
                                 m.sendto(json.dumps({"COMMAND": MODIFY_ADD, "FILENAME": filename, "HOST": HOST}).encode('utf-8'), (host, FILE_PORT))
 
-                    elif command == GET:
+                    elif command == GET or command == GET_VERSIONS:
                         filesize = request_list['FILESIZE']
                         filename = request_list['FILENAME']
                         print('Sending file \"' + filename + "\".")
-                        local_filepath = os.path.join(FILE_DIRECTORY, filename)
+                        # local_filepath = os.path.join(FILE_DIRECTORY, filename)
+                        local_filepath = ""
+                        if (command == GET):
+                            local_filepath, _ = self.get_latest_version(filename)
+                        else:
+                            local_filepath = self.create_version_superfile(filename)
                         host = request_list["HOST"]
                         # Send size first
                         filesize = os.path.getsize(local_filepath)
@@ -255,6 +309,7 @@ class Server:
                         print('Deleting file \"' + filename + "\".")
                         local_filepath = os.path.join(FILE_DIRECTORY, filename)
                         os.remove(local_filepath)
+                        self.delete_all_files(filename)
                         for check_host in self.FILES:
                             if filename in self.FILES[check_host]:
                                 self.FILES[check_host].remove(filename)

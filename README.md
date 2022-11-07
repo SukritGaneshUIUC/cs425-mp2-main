@@ -1,8 +1,3 @@
-# cs425-mp2
-
-This is the repository for CS425 MP2. In this MP we write a program that enable multiple virtual machines to work as a distributed group membership.
-
-
 
 ## Usage
 You should run ```server.py``` on the provided virtual machines.
@@ -19,6 +14,8 @@ You can input the following commands(one at a time):
 - `list_self`: list self process's id. The format is ```{IP address}#timestamp```
 - `leave`:  command to voluntarily leave the group (different from a failure, which will be Ctrl-C or kill)
 - `grep`: get into MP1 distributed grep program
+
+You can also implement file commands. This is when you enter 6 as your command. There are several possible commands: GET, PUT, DEL, and GET-VERSIONS. You will be prompted to enter a filename and file directory depending on the command. The filename refers to the name of the file on the server, while the file directory refers to the name of the file locally. When doing a GET request, for example, you will need to specify the name of the file on the server, and the local file where the contents will be copied to.
 
 ## Output
 If the program runs successfully, your terminal will show the following based on your input:
@@ -55,6 +52,11 @@ Selected voluntarily leave
 'fa22-cs425-5707.cs.illinois.edu': ('1664158262', 'RUNNING'),
 'fa22-cs425-5706.cs.illinois.edu': ('1664158261', 'RUNNING')}
 ```
+
+You will also receive updates on whether a file has been successfully uploaded, downloaded, or deleted.
+
 ## Authors
 - Zerun Zhao(zerunz2)
 - Han Xu(hanxu8)
+- Sukrit (sukritg2)
+- Amrith (amrithb2)
